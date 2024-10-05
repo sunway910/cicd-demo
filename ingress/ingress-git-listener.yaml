@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pipeline-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: git-listener-cicd-demo.sunway.run
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cicd-demo-github-listener
+                port:
+                  number: 8080

@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: update-image-tag
+spec:
+  workspaces:
+    - name: source
+    - name: ssh-directory
+  params:
+    - name: commit_id
+      description: result of git commit
+    - name: project_path
+      description: which deployment path to update
+  steps:
+    - name: update-image-tag
+      image: alpine/git
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        if [[ -d $(workspaces.ssh-directory.path) ]]; then
+          mkdir -p ~/.ssh
+          cp $(workspaces.ssh-directory.path)/known_hosts ~/.ssh/known_hosts
+          cp $(workspaces.ssh-directory.path)/id_rsa ~/.ssh/id_rsa
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/*
+        fi
+        
+        # git init only required in network file system pvc, do not required in disk storage pvc, cause nfs deny git search its parent working tree
+        git init
+        git clone git@github.com:sunway910/cicd-demo.git
+        git checkout "$(params.revision)"
+        
+        # cd https://github.com/sunway910/cicd-demo/cicd-demo-helm
+        cd "$(project_path)"
+        # update image tag to the latest one
+        sed -i "s|tag:.*|tag: $(params.commit_id)|" values.yaml || { echo "Failed to update values.yaml"; exit 1; }
+        
+        git config --global user.email "tekton@sunway.run"
+        git config --global user.name "Tekton Bot"
+        
+        git add values.yaml
+        git commit -m "skip ci: update image tag to $(params.commit_id)" || { echo "Failed to commit changes"; exit 1; }
+        git push || { echo "Failed to push changes"; exit 1; }
+      securityContext:
+        runAsUser: 0

@@ -1,0 +1,7 @@
+namespace: default
+service:
+  port: 80
+  label: cicd-demo
+  image:
+    repository: nginx
+    tag: latest

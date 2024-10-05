@@ -1,0 +1,29 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: cicd-demo-github-listener
+spec:
+  serviceAccountName: tekton-triggers-github-sa
+  triggers:
+    - name: cicd-demo-github-listener
+      interceptors:
+        - ref:
+            name: "github"
+          params:
+            - name: "secretRef"
+              value:
+                secretName: github-triggers-secret
+                secretKey: secretToken
+            - name: "eventTypes"
+              value: [ "push", "pull_request" ]
+        - ref:
+            # Common Expression Language
+            name: "cel"
+          params:
+            - name: "filter"
+              # https://github.com/sunway910/cicd-demo
+              value: "body.repository.name == 'cicd-demo' && !body.head_commit.message.contains('skip ci') && (body.ref == 'refs/heads/main' || body.ref == 'refs/heads/master')"
+      bindings:
+        - ref: github-push-binding
+      template:
+        ref: cicd-demo-github-template

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.service.label }}-deployment
+  namespace: {{ .Values.namespace }}
+  annotations:
+    # restart deployment when configmap changes
+    configmap.reloader.stakater.com/reload: "cicd-demo-configmap"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.service.label }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.service.label }}
+    spec:
+      containers:
+        - name: {{ .Values.service.label }}
+          image: {{ .Values.service.image.repository }}:{{ .Values.service.image.tag }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: cicd-demo-configmap

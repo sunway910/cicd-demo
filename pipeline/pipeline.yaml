@@ -1,0 +1,67 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: cicd-demo-pipeline
+spec:
+  params:
+    # clone from which repo and revision
+    - name: repo_url
+      type: string
+    - name: repo_revision
+      type: string
+    # push image to which registry and repository
+    - name: image-registry
+      default: docker.io/sunway
+    - name: image-repo-name
+      type: string
+  workspaces:
+    - name: git-source
+    - name: docker-cred
+    - name: github-cred
+  tasks:
+    - name: fetch-from-git
+      taskRef:
+        name: git-clone
+      params:
+        - name: repo_url
+          value: $(params.repo_url)
+        - name: revision
+          value: $(params.repo_revision)
+        - name: deleteExisting
+          value: "true"
+      workspaces:
+        - name: output
+          workspace: git-source
+        - name: ssh-directory
+          workspace: github-cred
+    - name: build-image
+      runAfter: [ fetch-from-git ]
+      taskRef:
+        name: kaniko-build-and-push
+      params:
+        - name: IMAGE
+          value: $(params.image-registry)/$(params.image-repo-name):$(tasks.fetch-from-git.results.commit)
+        - name: CONTEXT
+          value: ""
+        - name: DOCKERFILE
+          value: $(workspaces.source.path)/Dockerfile
+      workspaces:
+        - name: source
+          workspace: git-source
+        - name: dockerconfig
+          workspace: docker-cred
+    - name: update-image-tag
+      runAfter: [ build-image ]
+      taskRef:
+        name: update-image-tag
+      params:
+        - name: commit_id
+          value: $(tasks.fetch-from-git.results.commit)
+        # cd https://github.com/sunway910/cicd-demo/$project_path
+        - name: project_path
+          value: cicd-demo-helm
+      workspaces:
+        - name: source
+          workspace: git-source
+        - name: ssh-directory
+          workspace: github-cred
