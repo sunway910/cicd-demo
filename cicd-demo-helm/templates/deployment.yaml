@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Values.namespace }}
   annotations:
     # restart deployment when configmap changes
+    # kubectl apply -f https://raw.githubusercontent.com/stakater/Reloader/master/deployments/kubernetes/reloader.yaml
     configmap.reloader.stakater.com/reload: "cicd-demo-configmap"
 spec:
   replicas: 1
