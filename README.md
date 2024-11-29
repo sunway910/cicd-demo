@@ -1,4 +1,4 @@
 # cicd-demo
 CICD with Tekton and ArgoCD
 
-Blog: http://sunway.run/blog/CICDWithTektonAndArgoCD
+Blog: https://www.sunway.run/blog/CICDWithTektonAndArgoCD
