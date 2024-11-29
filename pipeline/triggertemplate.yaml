@@ -6,6 +6,7 @@ spec:
   params:
     - name: gitrevision
     - name: gitrepositoryurl
+    - name: gitbranch
   resourceTemplates:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
@@ -42,6 +43,8 @@ spec:
             value: $(tt.params.gitrepositoryurl)
           - name: repo_revision
             value: $(tt.params.gitrevision)
+          - name: git_branch
+            value: $(tt.params.gitbranch)
           - name: image-registry
             value: docker.io/sunway
           - name: image-repo-name

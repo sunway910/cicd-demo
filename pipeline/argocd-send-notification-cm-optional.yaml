@@ -1,0 +1,370 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.webhook.team-a-hook: |
+    url: "https://open.larksuite.com/open-apis/bot/v2/hook/123456"
+    headers:
+      - name: Content-Type
+        value: application/json
+  service.webhook.team-b-hook: |
+    url: "https://open.larksuite.com/open-apis/bot/v2/hook/654321"
+    headers:
+      - name: Content-Type
+        value: application/json
+  context: |
+    argocdUrl: https://argocd.sunway.run
+  trigger.on-deployed: | # application is healthy after being synced
+    - description: Application is synced and healthy. Triggered once per commit.
+      send: [app-status-change]
+      when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+  trigger.on-sync-running: | # start syncing
+    - description: Application is being synced
+      send: [app-status-change]
+      when: app.status.operationState.phase in ['Running']
+  trigger.on-sync-succeeded: | # syncing has succeeded
+    - description: Application syncing has succeeded
+      send: [app-status-change]
+      when: app.status.operationState.phase in ['Succeeded']
+  trigger.on-health-degraded: |
+    - description: Application has degraded
+      send: [app-degraded]
+      when: app.status.health.status == 'Degraded'
+  trigger.on-sync-failed: |
+    - description: Application syncing has failed
+      send: [app-degraded]
+      when: app.status.operationState.phase in ['Error', 'Failed']
+  trigger.on-sync-status-unknown: |
+    - description: Application status is 'Unknown'
+      send: [app-degraded]
+      when: app.status.sync.status == 'Unknown'
+  template.app-status-change: |
+    webhook:
+      team-a-hook:
+        method: POST
+        body: |
+          {
+            "msg_type": "interactive",
+            "card": {
+              "config": {
+                "wide_screen_mode": true
+              },
+              "header": {
+                "title": {
+                  "content": "Prod Application Status Changed",
+                  "tag": "plain_text"
+                },
+                "template": "green"
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "<at id=all></at>",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Name:** {{.app.metadata.name}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Sync Status:** {{.app.status.operationState.phase}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Status:** {{.app.status.health.status}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Time:** {{.app.status.operationState.startedAt}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {
+                        "content": "Prod ArgoCD Deployment Details",
+                        "tag": "plain_text"
+                      },
+                      "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                      "type": "default"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+      team-b-hook:
+        method: POST
+        body: |
+          {
+            "msg_type": "interactive",
+            "card": {
+              "config": {
+                "wide_screen_mode": true
+              },
+              "header": {
+                "title": {
+                  "content": "Prod Application Status Changed",
+                  "tag": "plain_text"
+                },
+                "template": "green"
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "<at id=all></at>",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Name:** {{.app.metadata.name}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Sync Status:** {{.app.status.operationState.phase}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Status:** {{.app.status.health.status}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Time:** {{.app.status.operationState.startedAt}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {
+                        "content": "Prod ArgoCD Deployment Details",
+                        "tag": "plain_text"
+                      },
+                      "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                      "type": "default"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+  template.app-degraded: |
+    webhook:
+      team-a-hook:
+        method: POST
+        body: |
+          {
+            "msg_type": "interactive",
+            "card": {
+              "config": {
+                "wide_screen_mode": true
+              },
+              "header": {
+                "title": {
+                  "content": "Alert Prod Application Degraded",
+                  "tag": "plain_text"
+                },
+                "template": "red"
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "<at id=all></at>",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Name:** {{.app.metadata.name}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Sync Status:** {{.app.status.operationState.phase}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Status:** {{.app.status.health.status}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Time:** {{.app.status.operationState.startedAt}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {
+                        "content": "Prod ArgoCD Deployment Details",
+                        "tag": "plain_text"
+                      },
+                      "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                      "type": "default"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+      team-b-hook:
+        method: POST
+        body: |
+          {
+            "msg_type": "interactive",
+            "card": {
+              "config": {
+                "wide_screen_mode": true
+              },
+              "header": {
+                "title": {
+                  "content": "Alert Prod Application Degraded",
+                  "tag": "plain_text"
+                },
+                "template": "red"
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "<at id=all></at>",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Name:** {{.app.metadata.name}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Sync Status:** {{.app.status.operationState.phase}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Application Status:** {{.app.status.health.status}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Time:** {{.app.status.operationState.startedAt}}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {
+                        "content": "Prod ArgoCD Deployment Details",
+                        "tag": "plain_text"
+                      },
+                      "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+                      "type": "default"
+                    }
+                  ]
+                }
+              ]
+            }
+          }

@@ -9,6 +9,8 @@ spec:
       type: string
     - name: repo_revision
       type: string
+    - name: git_branch
+      type: string
     # push image to which registry and repository
     - name: image-registry
       default: docker.io/sunway
@@ -55,6 +57,8 @@ spec:
       taskRef:
         name: update-image-tag
       params:
+        - name: git_branch
+          value: $(params.git_branch)
         - name: commit_id
           value: $(tasks.fetch-from-git.results.commit)
         # cd https://github.com/sunway910/cicd-demo/$project_path
@@ -65,3 +69,28 @@ spec:
           workspace: git-source
         - name: ssh-directory
           workspace: github-cred
+  # delete finally task if you dont need to send notification to IM
+  # finally task will not be executed if pipeline_start_time/pipeline_end_time is null
+  finally:
+    - name: send-notification-to-lark
+      taskRef:
+        name: send-notification-to-lark
+      params:
+        - name: webhook_url
+          value: "https://open.larksuite.com/open-apis/bot/v2/hook/xxxxx"
+        - name: pipeline_title
+          value: "Demo Pipeline"
+        - name: pipeline_result
+          value: $(tasks.status)
+        - name: commit_info
+          value: $(tasks.fetch-from-git.results.commit-info)
+        - name: pipeline_result_link
+          value: "https://tekton-dashboard.sunway.run/#/pipelineruns"
+        - name: github_commit_link
+          value: https://github.com/sunway910/cicd-demo/commit/$(tasks.fetch-from-git.results.commit)
+        - name: mention_user_open_id
+          value: "all"
+        - name: pipeline_start_time
+          value: $(tasks.fetch-from-git.results.pipeline-start-time)
+        - name: pipeline_end_time
+          value: $(tasks.update-image-tag.results.pipeline-end-time)

@@ -30,6 +30,8 @@ spec:
       description: Digest of the image just built.
     - name: IMAGE_URL
       description: URL of the image just built.
+    - name: image-build-end-time
+      description: "The end time of the build task"
   steps:
     - name: build-and-push
       workingDir: $(workspaces.source.path)
@@ -40,14 +42,13 @@ spec:
         - --context=$(workspaces.source.path)/$(params.CONTEXT) # The user does not need to care the workspace and the source.
         - --destination=$(params.IMAGE)
         - --digest-file=$(results.IMAGE_DIGEST.path)
-      # kaniko assumes it is running as root, which means this example fails on platforms
-      # that default to run containers as random uid (like OpenShift). Adding this securityContext
-      # makes it explicit that it needs to run as root.
       securityContext:
         runAsUser: 0
     - name: write-url
       image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
       script: |
         set -e
+        export TZ=UTC-8
         image="$(params.IMAGE)"
         echo -n "${image}" | tee "$(results.IMAGE_URL.path)"
+        TZ='Asia/Shanghai' echo -n "$(date '+Date: %Y-%m-%d Time: %H:%M:%S')" > $(results.image-build-end-time.path)

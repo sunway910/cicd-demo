@@ -1,0 +1,176 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: send-notification-to-lark
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/displayName: "Send message to Lark Group"
+    tekton.dev/categories: Messaging
+    tekton.dev/tags: messaging
+spec:
+  description: >-
+    These tasks post a simple message to a lark group.
+    This task uses Incoming Webhooks of lark to send the message.
+  params:
+    - name: message_type
+      type: string
+      default: "interactive"
+    - name: wide_screen_mode
+      type: string
+      default: "true"
+    - name: pipeline_title
+      type: string
+      default: "Demo Pipeline"
+    - name: pipeline_result
+      type: string
+      description: The result of the pipeline, can be "Succeeded" or "Failed"
+      default: "Succeeded"
+    - name: commit_info
+      type: string
+      default: "Author: Tekton Bot"
+    - name: pipeline_result_link
+      type: string
+      default: "https://tekton-dashboard.sunway.run/#/pipelineruns"
+    - name: github_commit_link
+      type: string
+      default: "https://github.com/sunway910/cicd-demo"
+    - name: mention_user_open_id
+      type: string
+      default: "all"
+    - name: pipeline_start_time
+      type: string
+      default: "2024-01-01 00:00:00"
+    - name: pipeline_end_time
+      type: string
+      default: "2024-01-01 01:00:00"
+    - name: webhook_url
+      type: string
+      default: ""
+  steps:
+    - name: lark-webhook
+      image: docker.io/curlimages/curl:7.70.0@sha256:031df77a11e5edded840bc761a845eab6e3c2edee22669fb8ad6d59484b6a1c4 #tag: 7.70.0
+      script: |
+        #!/bin/sh
+        set -e
+
+        # if params.pipeline_result is "Succeeded", then use set content color to green, else set it to red
+        # if params.pipeline_result is "Succeeded", then set pipeline_result_content to "The pipeline has completed successfully", else set it to "The pipeline has failed"
+        # The color of the lark webhook card, can be red, orange, yellow, green, blue, purple, gray
+        echo "pipeline_result: $(params.pipeline_result)"
+        PIPELINE_RESULT="$(params.pipeline_result)"
+        if [ "$PIPELINE_RESULT" = "Succeeded" ]; then
+          pipeline_result_content="The pipeline has completed successfully"
+          message_color="green"
+        else
+          pipeline_result_content="The pipeline has failed"
+          message_color="red"
+        fi
+        echo "Send to webhook_url: $(params.webhook_url)"
+
+        message_type="$(params.message_type)"
+        wide_screen_mode="$(params.wide_screen_mode)"
+        pipeline_title="$(params.pipeline_title)"
+        pipeline_start_time="$(params.pipeline_start_time)"
+        pipeline_end_time="$(params.pipeline_end_time)"
+        mention_user_open_id="$(params.mention_user_open_id)"
+        commit_info=$(echo -n "$(params.commit_info)" | awk 1 ORS='\\n')
+        pipeline_result_link="$(params.pipeline_result_link)"
+        github_commit_link="$(params.github_commit_link)"
+        webhook_url="$(params.webhook_url)"
+
+        json_data=$(cat <<EOF
+          {
+            "msg_type": "${message_type}",
+            "card": {
+              "config": {
+                "wide_screen_mode": ${wide_screen_mode}
+              },
+              "header": {
+                "title": {
+                  "content": "${pipeline_title}",
+                  "tag": "plain_text"
+                },
+                "template": "${message_color}"
+              },
+              "elements": [
+                {
+                  "tag": "div",
+                  "fields": [
+                    {
+                      "is_short": true,
+                      "text": {
+                        "content": "**Start Time:**\n${pipeline_start_time}",
+                        "tag": "lark_md"
+                      }
+                    },
+                    {
+                      "is_short": true,
+                      "text": {
+                        "content": "**End Time:**\n${pipeline_end_time}",
+                        "tag": "lark_md"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "<at id=${mention_user_open_id}></at>${pipeline_result_content}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "div",
+                  "text": {
+                    "content": "**Commit Info:**\n ${commit_info}",
+                    "tag": "lark_md"
+                  }
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {
+                        "content": "Pipeline CI Details",
+                        "tag": "plain_text"
+                      },
+                      "url": "${pipeline_result_link}",
+                      "type": "default"
+                    }
+                  ]
+                },
+                {
+                  "tag": "hr"
+                },
+                {
+                  "tag": "action",
+                  "actions": [
+                    {
+                      "tag": "button",
+                      "text": {
+                        "content": "Github Commit Details",
+                        "tag": "plain_text"
+                      },
+                      "url": "${github_commit_link}",
+                      "type": "default"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        EOF
+        )
+        curl -X POST -H "Content-Type: application/json" -d "${json_data}" "$webhook_url"
