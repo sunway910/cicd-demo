@@ -28,11 +28,6 @@ data:
     default-pod-template: |
       nodeSelector:
         pipeline: "true"
-      tolerations:
-        - key: "pipeline"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
     # default-affinity-assistant-pod-template contains the default pod template
     # to use for affinity assistant pods. If a pod template is specified on the
     # PipelineRun, the default-affinity-assistant-pod-template is merged with
@@ -40,11 +35,6 @@ data:
     default-affinity-assistant-pod-template: |
       nodeSelector:
         pipeline: "true"
-      tolerations:
-        - key: "pipeline"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
 
     # default-max-matrix-combinations-count contains the default maximum number
     # of combinations from a Matrix, if none is specified.
