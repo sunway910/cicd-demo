@@ -32,9 +32,7 @@ data:
     # to use for affinity assistant pods. If a pod template is specified on the
     # PipelineRun, the default-affinity-assistant-pod-template is merged with
     # that one.
-    default-affinity-assistant-pod-template: |
-      nodeSelector:
-        pipeline: "true"
+    # default-affinity-assistant-pod-template: 
 
     # default-max-matrix-combinations-count contains the default maximum number
     # of combinations from a Matrix, if none is specified.
