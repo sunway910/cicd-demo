@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tekton-dashboard-auth
+  namespace: tekton-pipelines
+  labels:
+    app: tekton-dashboard-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tekton-dashboard-auth
+  template:
+    metadata:
+      labels:
+        app: tekton-dashboard-auth
+    spec:
+      containers:
+        - args:
+            - --provider=github
+            - --cookie-secure=true
+            - --upstream=http://tekton-dashboard:9097
+            - --http-address=0.0.0.0:8080
+            - --redirect-url=https://tekton-dashboard.sunway.run/oauth2/callback
+            - --email-domain=*
+            - --pass-basic-auth=false
+            - --pass-access-token=false
+            - --cookie-secret=P4HLB4CQI6dYvkHpbB4cdsdPfPTFMOcWqq6eadjT01A=
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: tekton-dashboard-auth
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: tekton-dashboard-auth
+          image: quay.io/oauth2-proxy/oauth2-proxy:latest
+          name: oauth-proxy
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ "ALL" ]
+            runAsNonRoot: true
+            seccompProfile:
+              type: "RuntimeDefault"
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tekton-dashboard-auth
+  namespace: tekton-pipelines
+  labels:
+    app: tekton-dashboard-auth
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: tekton-dashboard-auth
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: tekton-dashboard-auth
+  namespace: tekton-pipelines
+stringData:
+  username: Ov12amLAAR34DMGzRkx9
+  password: 2583dc8bz1350db5aey3521d8703111c2dc67893
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tekton-dashboard-ingress
+  namespace: tekton-pipelines
+spec:
+  rules:
+  - host: tekton-dashboard.sunway.run
+    http:
+      paths:
+      - backend:
+          service:
+            name: tekton-dashboard-auth
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
