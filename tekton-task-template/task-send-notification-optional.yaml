@@ -32,19 +32,19 @@ spec:
       default: "Author: Tekton Bot"
     - name: pipeline_result_link
       type: string
-      default: "https://tekton-dashboard.sunway.run/#/pipelineruns"
+      default: "https://tekton-dash.sunway.run/#/pipelineruns"
     - name: github_commit_link
       type: string
       default: "https://github.com/sunway910/cicd-demo"
     - name: mention_user_open_id
       type: string
       default: "all"
+    - name: pipeline_owner
+      type: string
+      default: "ou_xxxxxx"
     - name: pipeline_start_time
       type: string
       default: "2024-01-01 00:00:00"
-    - name: pipeline_end_time
-      type: string
-      default: "2024-01-01 01:00:00"
     - name: webhook_url
       type: string
       default: ""
@@ -73,8 +73,8 @@ spec:
         wide_screen_mode="$(params.wide_screen_mode)"
         pipeline_title="$(params.pipeline_title)"
         pipeline_start_time="$(params.pipeline_start_time)"
-        pipeline_end_time="$(params.pipeline_end_time)"
         mention_user_open_id="$(params.mention_user_open_id)"
+        pipeline_owner="$(params.pipeline_owner)"
         commit_info=$(echo -n "$(params.commit_info)" | awk 1 ORS='\\n')
         pipeline_result_link="$(params.pipeline_result_link)"
         github_commit_link="$(params.github_commit_link)"
@@ -104,13 +104,6 @@ spec:
                         "content": "**Start Time:**\n${pipeline_start_time}",
                         "tag": "lark_md"
                       }
-                    },
-                    {
-                      "is_short": true,
-                      "text": {
-                        "content": "**End Time:**\n${pipeline_end_time}",
-                        "tag": "lark_md"
-                      }
                     }
                   ]
                 },
@@ -120,7 +113,7 @@ spec:
                 {
                   "tag": "div",
                   "text": {
-                    "content": "<at id=${mention_user_open_id}></at>${pipeline_result_content}",
+                    "content": "<at id=${mention_user_open_id}></at> \n <at id=${pipeline_owner}></at> \n ${pipeline_result_content}",
                     "tag": "lark_md"
                   }
                 },
