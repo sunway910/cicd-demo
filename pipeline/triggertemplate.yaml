@@ -20,13 +20,14 @@ spec:
         workspaces:
           - name: git-source
             volumeClaimTemplate:
+              # please make sure a default storage class is available in your cluster
               spec:
                 accessModes:
                   - ReadWriteOnce
                 resources:
                   requests:
                     storage: 10Gi
-                #storageClassName: csi
+                #storageClassName: my-custom-sc
           - name: docker-cred
             secret:
               defaultMode: 420
