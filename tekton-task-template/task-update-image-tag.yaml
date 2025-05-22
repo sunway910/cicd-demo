@@ -18,6 +18,8 @@ spec:
       default: main
   results:
     - name: pipeline-end-time
+    - name: done
+      description: "Is the task works fine?"
   steps:
     - name: update-image-tag
       image: alpine/git
@@ -38,16 +40,16 @@ spec:
 
           # git init only required in network file system pvc, do not required in disk storage pvc, cause nfs deny git search its parent working tree
           # git init
-          # 'git@github.com:sunway910/cicd-demo.git' can be a param
           git clone git@github.com:sunway910/cicd-demo.git
-          cd cicd-demo
-          git checkout "$(echo $(params.git_branch) | rev | cut -d'/' -f1 | rev)"
+          cd deployment
 
-          # cd https://github.com/sunway910/cicd-demo/cicd-demo-helm
-          cd "$(project_path)"
-          # update image tag to the latest one
-          sed -i "s|tag:.*|tag: $(params.commit_id)|" values.yaml || { echo "Failed to update values.yaml"; exit 1; }
-
+          read -a path_array <<<"$(params.project_path)"
+          for path in "${path_array[@]}"; do
+            echo "Update image tag in $path"
+            cd helm/$path
+            sed -i "s|tag:.*|tag: $(params.commit_id)|" values.yaml || { echo "Failed to update values.yaml"; exit 1; }
+            cd -
+          done
 
           git config --global user.email "tekton@sunway.run"
           git config --global user.name "Tekton Bot"
@@ -56,6 +58,7 @@ spec:
           git commit -m "skip ci: update image tag to $(params.commit_id)" || { echo "Failed to commit changes"; exit 1; }
           git push || { echo "Failed to push changes"; exit 1; }
           TZ='Asia/Shanghai' echo -n "$(date '+Date: %Y-%m-%d Time: %H:%M:%S')" > $(results.pipeline-end-time.path)
+          echo -n "yes" > $(results.done.path)
         EOF
       securityContext:
         runAsUser: 0
