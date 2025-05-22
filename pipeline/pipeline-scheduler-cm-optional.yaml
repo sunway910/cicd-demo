@@ -7,7 +7,33 @@ metadata:
   name: config-defaults
   namespace: tekton-pipelines
 data:
+  # kubectl label node node-xxx node-role.kubernetes.io/worker=pipeline
+  # kubectl taint node node-xxx dedicated=pipeline:NoSchedule
+  default-pod-template: |
+    nodeSelector:
+      node-role.kubernetes.io/worker: pipeline
+    tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "pipeline"
+      effect: "NoSchedule"
+
   _example: |
+    ################################
+    #                              #
+    #    EXAMPLE CONFIGURATION     #
+    #                              #
+    ################################
+
+    # This block is not actually functional configuration,
+    # but serves to illustrate the available configuration
+    # options and document them in a way that is accessible
+    # to users that `kubectl edit` this config map.
+    #
+    # These sample configuration options may be copied out of
+    # this example block and unindented to be in the data block
+    # to actually change the configuration.
+
     # default-timeout-minutes contains the default number of
     # minutes to use for TaskRun and PipelineRun, if none is specified.
     default-timeout-minutes: "60"  # 60 minutes
@@ -25,15 +51,98 @@ data:
     # default-pod-template contains the default pod template to use for
     # TaskRun and PipelineRun. If a pod template is specified on the
     # PipelineRun, the default-pod-template is merged with that one.
-    default-pod-template: |
-      nodeSelector:
-        pipeline: "true"
+    # default-pod-template: |
+
     # default-affinity-assistant-pod-template contains the default pod template
     # to use for affinity assistant pods. If a pod template is specified on the
     # PipelineRun, the default-affinity-assistant-pod-template is merged with
     # that one.
-    # default-affinity-assistant-pod-template: 
+    # default-affinity-assistant-pod-template:
+
+    # default-cloud-events-sink contains the default CloudEvents sink to be
+    # used for TaskRun and PipelineRun, when no sink is specified.
+    # Note that right now it is still not possible to set a PipelineRun or
+    # TaskRun specific sink, so the default is the only option available.
+    # If no sink is specified, no CloudEvent is generated
+    # default-cloud-events-sink:
+
+    # default-task-run-workspace-binding contains the default workspace
+    # configuration provided for any Workspaces that a Task declares
+    # but that a TaskRun does not explicitly provide.
+    # default-task-run-workspace-binding: |
+    #   emptyDir: {}
 
     # default-max-matrix-combinations-count contains the default maximum number
     # of combinations from a Matrix, if none is specified.
     default-max-matrix-combinations-count: "256"
+
+    # default-forbidden-env contains comma seperated environment variables that cannot be
+    # overridden by podTemplate.
+    default-forbidden-env:
+
+    # default-resolver-type contains the default resolver type to be used in the cluster,
+    # no default-resolver-type is specified by default
+    default-resolver-type:
+
+    # default-imagepullbackoff-timeout contains the default duration to wait
+    # before requeuing the TaskRun to retry, specifying 0 here is equivalent to fail fast
+    # possible values could be 1m, 5m, 10s, 1h, etc
+    # default-imagepullbackoff-timeout: "5m"
+
+    # default-maximum-resolution-timeout specifies the default duration used by the
+    # resolution controller before timing out when exceeded.
+    # Possible values include "1m", "5m", "10s", "1h", etc.
+    # Example: default-maximum-resolution-timeout: "1m"
+
+    # default-container-resource-requirements allow users to update default resource requirements
+    # to a init-containers and containers of a pods create by the controller
+    # Onet: All the resource requirements are applied to init-containers and containers
+    # only if the existing resource requirements are empty.
+    # default-container-resource-requirements: |
+    #   place-scripts: # updates resource requirements of a 'place-scripts' container
+    #     requests:
+    #       memory: "64Mi"
+    #       cpu: "250m"
+    #     limits:
+    #       memory: "128Mi"
+    #       cpu: "500m"
+    #
+    #   prepare: # updates resource requirements of a 'prepare' container
+    #     requests:
+    #       memory: "64Mi"
+    #       cpu: "250m"
+    #     limits:
+    #       memory: "256Mi"
+    #       cpu: "500m"
+    #
+    #   working-dir-initializer: # updates resource requirements of a 'working-dir-initializer' container
+    #     requests:
+    #       memory: "64Mi"
+    #       cpu: "250m"
+    #     limits:
+    #       memory: "512Mi"
+    #       cpu: "500m"
+    #
+    #   prefix-scripts: # updates resource requirements of containers which starts with 'scripts-'
+    #     requests:
+    #       memory: "64Mi"
+    #       cpu: "250m"
+    #     limits:
+    #       memory: "128Mi"
+    #       cpu: "500m"
+    #
+    #   prefix-sidecar-scripts: # updates resource requirements of containers which starts with 'sidecar-scripts-'
+    #     requests:
+    #       memory: "64Mi"
+    #       cpu: "250m"
+    #     limits:
+    #       memory: "128Mi"
+    #       cpu: "500m"
+    #
+    #   default: # updates resource requirements of init-containers and containers which has empty resource resource requirements
+    #     requests:
+    #       memory: "64Mi"
+    #       cpu: "250m"
+    #     limits:
+    #       memory: "256Mi"
+    #       cpu: "500m"
