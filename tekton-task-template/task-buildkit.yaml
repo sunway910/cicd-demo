@@ -1,0 +1,91 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: buildkit-build-and-push
+spec:
+  workspaces:
+    - name: source
+      description: Holds the context and Dockerfile
+    - name: dockerconfig
+      description: Includes a docker `config.json`
+      optional: true
+      mountPath: /root/.docker
+  params:
+    - name: IMAGE
+      description: Name (reference) of the image to build.
+    - name: DOCKERFILE
+      description: Path to the Dockerfile to build.
+      default: ./Dockerfile
+    - name: CONTEXT
+      description: The build context used by BuildKit.
+      default: ./
+    - name: PLATFORM
+      description: Target platform for the build amd64/arm64
+      default: linux/amd64
+    - name: EXTRA_ARGS
+      type: array
+      default: []
+    - name: BUILDER_IMAGE
+      description: The image on which builds will run
+      default: moby/buildkit:latest
+  results:
+    - name: IMAGE_DIGEST
+      description: Digest of the image just built.
+    - name: IMAGE_URL
+      description: URL of the image just built.
+    - name: image-build-end-time
+      description: "The end time of the build task"
+    - name: done
+      description: "Is the task done?"
+  steps:
+    - name: init-end-time
+      image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+      script: |
+        TZ='Asia/Shanghai' echo -n "$(date '+Date: %Y-%m-%d Time: %H:%M:%S')" > $(results.image-build-end-time.path)
+    - name: build-and-push
+      workingDir: $(workspaces.source.path)
+      image: $(params.BUILDER_IMAGE)
+      env:
+        - name: DOCKER_CONFIG
+          value: /root/.docker
+      script: |
+        echo "=== Starting build process ==="
+        echo "Workspace path: $(workspaces.source.path)"
+        echo "Target path: $(params.CONTEXT)"
+        echo "Dockerfile path: $(params.DOCKERFILE)"
+        echo "Target image: $(params.IMAGE)"
+        echo "Platform: $(params.PLATFORM)"
+        buildctl-daemonless.sh build \
+          --frontend=dockerfile.v0 \
+          --local=context=$(params.CONTEXT) \
+          --local=dockerfile=$(params.DOCKERFILE) \
+          --opt=filename=Dockerfile \
+          --opt=platform=$(params.PLATFORM) \
+          --output=type=image,name=$(params.IMAGE),push=true \
+          --export-cache=type=inline \
+          --import-cache=type=registry,ref=$(params.IMAGE) 
+
+      securityContext:
+        runAsUser: 0
+        privileged: true
+
+    - name: get-digest
+      image: docker:23.0.1-cli
+      script: |
+        echo "=== Getting image digest ==="
+        export BUILDX_CONFIG=/tmp/.buildx
+        mkdir -p /tmp/.buildx
+        docker buildx imagetools inspect $(params.IMAGE) | grep Digest | awk '{print $2}' | tee $(results.IMAGE_DIGEST.path)
+        echo "=== Digest saved ==="
+
+    - name: write-url
+      image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+      script: |
+        echo "=== Writing results ==="
+        export TZ=UTC-8
+        image="$(params.IMAGE)"
+        echo -n "${image}" | tee "$(results.IMAGE_URL.path)"
+        echo ""
+        TZ='Asia/Shanghai' echo -n "$(date '+Date: %Y-%m-%d Time: %H:%M:%S')" > $(results.image-build-end-time.path)
+        echo "=== Results written ==="
+        echo -n "yes" > $(results.done.path)
